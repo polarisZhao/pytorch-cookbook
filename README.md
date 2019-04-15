@@ -242,7 +242,7 @@ dist = torch.sqrt(torch.sum((X1 - X2) ** 2, dim=2))
 
 #### 3. 模型定义
 
-##### (1) 卷积层： 
+##### (1) 卷积层 
 
 最常用的卷积层配置是：
 
@@ -264,40 +264,41 @@ conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, paddi
 
 参见： [Synchronized-BatchNorm-PyTorch​github](vacancy/Synchronized-BatchNorm-PyTorch​github.com)
 
-##### (4) 计算模型整体参数量
+##### (4) 计算模型参数量[D]
 
 ~~~
-import functools
-import operator
-
-num_parameters = sum(functools.reduce(operator.mul, parameter.size(), 1)
-                     for parameter in model.parameters())
+# Total parameters                    
+num_params = sum(p.numel() for p in model.parameters()) 
+# Trainable parameters
+num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)  
 ~~~
 
 类似Keras的model.summary()输出模型信息，参见[pytorch-summary​github](sksq96/pytorch-summary​github.com)
 
-##### (5) 模型权值初始化
+##### (5) 模型权值初始化[D]
 
 注意`model.modules()`和`model.children()`的区别：`model.modules()`会迭代地遍历模型的所有子层，而`model.children()`只会遍历模型下的一层。
 
-~~~
+~~~python
 # Common practise for initialization.
-for layer in model.modules():
-    if isinstance(layer, torch.nn.Conv2d):
-        torch.nn.init.kaiming_normal_(layer.weight, mode='fan_out',
+for m in model.modules():
+    if isinstance(m, torch.nn.Conv2d):
+        torch.nn.init.kaiming_normal_(m.weight, mode='fan_out',
                                       nonlinearity='relu')
-        if layer.bias is not None:
-            torch.nn.init.constant_(layer.bias, val=0.0)
-    elif isinstance(layer, torch.nn.BatchNorm2d):
-        torch.nn.init.constant_(layer.weight, val=1.0)
-        torch.nn.init.constant_(layer.bias, val=0.0)
-    elif isinstance(layer, torch.nn.Linear):
-        torch.nn.init.xavier_normal_(layer.weight)
-        if layer.bias is not None:
-            torch.nn.init.constant_(layer.bias, val=0.0)
+        if m.bias is not None:
+            torch.nn.init.constant_(m.bias, val=0.0)
+    
+    elif isinstance(m, torch.nn.BatchNorm2d):
+        torch.nn.init.constant_(m.weight, 1.0)
+        torch.nn.init.constant_(m.bias, 0.0)
+  
+    elif isinstance(m, torch.nn.Linear):
+        torch.nn.init.xavier_normal_(m.weight)
+        if m.bias is not None:
+            torch.nn.init.constant_(m.bias, 0.0)
 
 # Initialization with given tensor.
-layer.weight = torch.nn.Parameter(tensor)
+m.weight = torch.nn.Parameter(tensor)
 ~~~
 
 ##### (6) 部分层使用预训练模型
@@ -397,12 +398,11 @@ optimizer = torch.optim.SGD(parameters, lr=1e-2, momentum=0.9, weight_decay=1e-4
 
 ~~~
 
-
 #### 5. 模型训练
 
 ##### (1) 常见训练和验证数据预处理
 
-其中ToTensor操作会将PIL.Image或形状为H×W×D，数值范围为[0, 255]的np.ndarray转换为形状为D×H×W，数值范围为[0.0, 1.0]的torch.Tensor。
+ToTensor操作会将PIL.Image或形状为H×W×D，数值范围为[0, 255]的np.ndarray转换为形状为D×H×W，数值范围为[0.0, 1.0]的torch.Tensor。
 
 ~~~
 train_transform = torchvision.transforms.Compose([
@@ -435,7 +435,7 @@ for t in epoch(80):
         optimizer.step()
 ~~~
 
-##### (3)  标记平滑
+##### (3)  label smothing
 
 ~~~
 for images, labels in train_loader:
@@ -494,6 +494,13 @@ loss = ...  # Standard cross-entropy loss
 for param in model.parameters():
     loss += torch.sum(torch.abs(param))
 loss.backward()
+
+
+reg = 1e-6
+l2_loss = Variable(torch.FloatTensor(1), requires_grad=True)
+for name, param in model.named_parameters():
+    if 'bias' not in name:
+        l2_loss = l2_loss + (0.5 * reg * torch.sum(torch.pow(W, 2)))
 ~~~
 
 ##### (7) 不对偏置项进行L2正则化/权值衰减（weight decay）
@@ -559,7 +566,6 @@ for t in epoch(80):
 ##### （12）得到当前学习率
 
 ~~~
-得到当前学习率
 # If there is one global learning rate (which is the common case).
 lr = next(iter(optimizer.param_groups))['lr']
 
@@ -673,15 +679,13 @@ with torch.autograd.profiler.profile(enabled=True, use_cuda=False) as profile:
 python -m torch.utils.bottleneck main.py
 ~~~
 
+参考链接：
 
+- Tensorflow cookbook
 
+- https://github.com/kevinzakka/pytorch-goodies
 
+- https://github.com/chenyuntc/pytorch-book
 
-##### TBD:
+- pytorch 官方文档和tutorial
 
-- [ ] 参考链接：Tensorflow cookbook
-- [ ] 参考链接：https://github.com/kevinzakka/pytorch-goodies
-- [ ] https://github.com/chenyuntc/pytorch-book
-- [ ] pytorch 官方文档和tutorial
-- [ ] 添加一些示例代码
-- [ ] 翻译为英文
