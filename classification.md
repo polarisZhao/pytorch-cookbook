@@ -1,24 +1,27 @@
-import os
-import sys
-import math
+本文代码基于PyTorch 1.0版本，需要用到以下包
+
+~~~
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+~~~
 
-# conv
+#### 1. Basic define
+
+~~~python
+# conv3x3
 def conv3x3(in_planes, out_planes, stride=1, padding=1, groups=1):
     """3x3 convolution"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, groups=groups, bias=False)
-
+# conv1x1
 def conv1x1(in_channels, out_channels, stride=1):
     """1x1 convolution"""
     return nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, padding=0,
                     bias=False)
-
-# BasicConv2d
+# BasciConv2d  
 class BasicConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, **kwargs):
         super(BasicConv2d, self).__init__()
@@ -29,18 +32,21 @@ class BasicConv2d(nn.Module):
         x = self.conv(x)
         x = self.bn(x)
         return F.relu(x, inplace=True)
+~~~
 
-# VGG Block: TBD
+#### 2. resnet
 
-# Resnet Block
-class ResnetBlockA(nn.Module):
+~~~python
+class BasicBlock(nn.Module):
     expansion = 1
-    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, norm_layer=None):
-        super(ResnetBlockA, self).__init__()
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+                 base_width=64, norm_layer=None):
+        super(BasicBlock, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
-        if groups != 1:
-            raise ValueError('ResnetBlockA only supports groups=1')
+        if groups != 1 or base_width != 64:
+            raise ValueError('BasicBlock only supports groups=1 and base_width=64')
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
@@ -67,20 +73,24 @@ class ResnetBlockA(nn.Module):
         out = self.relu(out)
 
         return out
+~~~
 
-class ResnetBlcokB(nn.Module):
+~~~python
+class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, norm_layer=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+                 base_width=64, norm_layer=None):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
+        width = int(planes * (base_width / 64.)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
-        self.conv1 = conv1x1(inplanes, planes)
-        self.bn1 = norm_layer(planes)
-        self.conv2 = conv3x3(planes, planes, stride, groups)
-        self.bn2 = norm_layer(planes)
-        self.conv3 = conv1x1(planes, planes * self.expansion)
+        self.conv1 = conv1x1(inplanes, width)
+        self.bn1 = norm_layer(width)
+        self.conv2 = conv3x3(width, width, stride, groups)
+        self.bn2 = norm_layer(width)
+        self.conv3 = conv1x1(width, planes * self.expansion)
         self.bn3 = norm_layer(planes * self.expansion)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
@@ -107,7 +117,11 @@ class ResnetBlcokB(nn.Module):
         out = self.relu(out)
 
         return out
+~~~
 
+#### 3. Inception
+
+~~~python
 # Inception 
 class Inception(nn.Module):
 
@@ -134,9 +148,12 @@ class Inception(nn.Module):
         branch4 = self.branch4(x)
         outputs = [branch1, branch2, branch3, branch4]
         return torch.cat(outputs, 1)
+~~~
 
-# SENet
-class SEBasicBlock(nn.Module):
+#### 4. SENet
+
+~~~python
+class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, reduction=16):
@@ -167,12 +184,14 @@ class SEBasicBlock(nn.Module):
         out = self.relu(out)
 
         return out
+~~~
 
-class SEBottleneck(nn.Module):
+~~~python
+class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, reduction=16):
-        super(SEBottleneck, self).__init__()
+        super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
@@ -207,13 +226,16 @@ class SEBottleneck(nn.Module):
         out = self.relu(out)
 
         return out
+~~~
 
+#### 5. Shufflenet 
 
-# ShufflenetV1 & V2
-class ShufflenetV1Block(nn.Module):
+~~~python
+# ShufflenetV1
+class ShufflenetUnit(nn.Module):
     expansion = 4
     def __init__(self, inplanes, planes, stride=1, downsample=None, flag=False):
-        super(ShufflenetBlockV1, self).__init__()
+        super(ShufflenetUnit, self).__init__()
         self.downsample = downsample
         group_num = 3
         self.flag = flag
@@ -263,8 +285,11 @@ class ShufflenetV1Block(nn.Module):
         out = self.relu(out)
 
         return out
+~~~
 
-class ShufflenetV2Block(nn.Module):
+~~~python
+# ShuffleUnit V2
+class ShuffleUnit(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(ShufflenetBlockV2, self).__init__()
         self.downsample = downsample
@@ -324,26 +349,13 @@ class ShufflenetV2Block(nn.Module):
         x = torch.cat([x1, x2], 1)
         x = self._channel_shuffle(x)
         return x
- 
-# Mobilenet V1
-class MobileNetV1Block(nn.Module):
-    def __init__(self, in_c, out_c, stride=1):
-        super().__init__()
-        self.bn1 = nn.BatchNorm2d(in_c)
-        self.conv1 = nn.Conv2d(in_c, in_c, kernel_size=3, 
-                               stride=stride, padding=1,
-                               groups=in_c, bias=False)
-        self.conv2 = nn.Conv2d(in_c, out_c, kernel_size=1,
-                              stride=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(out_c)
-    
-    def forward(self, inp):
-        out = F.relu(self.bn1(self.conv1(inp)))
-        out = F.relu(self.bn2(self.conv2(out)))
-        return out
+~~~
 
+#### 6. Mobilenet V2
+
+~~~python
 # Mobilenet V2
-class MobilenetV2Block(nn.Module):
+class InvertedResidual(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio):
         super(InvertedResidual, self).__init__()
         self.stride = stride
@@ -367,4 +379,7 @@ class MobilenetV2Block(nn.Module):
             return x + self.conv(x)
         else:
             return self.conv(x)
- 
+~~~
+
+
+
