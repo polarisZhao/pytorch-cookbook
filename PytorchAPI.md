@@ -11,7 +11,7 @@ print(torch.__version__)
 
 ### 2. Tensor type 🌟
 
-Pytorch 给出了 9 种 CPU Tensor 类型和 9 种 GPU Tensor 类型。Pytorch 中默认的数据类型是torch.FloatTensor, 即 torch.Tensor 等同于 torch.FloatTensor。
+Pytorch 给出了 9 种 CPU Tensor 类型和 9 种 GPU Tensor 类型。Pytorch 中默认的数据类型是 torch.FloatTensor, 即 torch.Tensor 等同于 torch.FloatTensor。
 
 | Data type                | dtype                         | CPU tensor                            | GPU tensor              |
 | ------------------------ | ----------------------------- | ------------------------------------- | ----------------------- |
@@ -122,7 +122,6 @@ torch.full(sizes, value) # 指定 value
 ~~~python
 torch.rand(sizes)  # 均匀分布   
 torch.randn(sizes)   # 标准分布
-
 # 正态分布: 返回一个张量，包含从给定参数 means,std 的离散正态分布中抽取随机数。 均值 means是一个张量，包含每个输出元素相关的正态分布的均值 -> 以此张量的均值作为均值
 # std是一个张量，包含每个输出元素相关的正态分布的标准差 -> 以此张量的标准差作为标准差。 均值和标准差的形状不须匹配，但每个张量的元素个数须相同
 torch.normal(mean=torch.arange(1., 11.), std=torch.arange(1, 0, -0.1))
@@ -140,22 +139,22 @@ torch.randperm(m) # 0 到 m-1 的随机序列
 ##### 索引操作
 
 ~~~python
-a[row, column]  # row 行， cloumn 列
-a[index]  # 第index 行
-a[:,index]  # 第 index 列
+a[row, column]   # row 行， cloumn 列
+a[index]   # 第index 行
+a[:,index]   # 第 index 列
 
-a[0, -1] #第零行， 最后一个元素
-a[:index] # 前 index 行
-a[:row, 0:1] # 前 row 行， 0和1列
+a[0, -1]  # 第零行， 最后一个元素
+a[:index]  # 前 index 行
+a[:row, 0:1]  # 前 row 行， 0和1列
 
-a[a>1] # 选择 a > 1的元素， 等价于 a.masked_select(a>1)
+a[a>1]  # 选择 a > 1的元素， 等价于 a.masked_select(a>1)
 torch.nonzero(a) # 选择非零元素的坐标，并返回
-a.clamp(x, y) # 对 Tensor 元素进行限制， 小于x用x代替， 大于y用y代替
-torch.where(condition, x, y) # 满足condition 的位置输出x， 否则输出y
+a.clamp(x, y)  # 对 Tensor 元素进行限制， 小于x用x代替， 大于y用y代替
+torch.where(condition, x, y)  # 满足condition 的位置输出x， 否则输出y
 >>> a
 tensor([[ 6., -2.],
         [ 8.,  0.]])
->>> torch.where(a>1, torch.full_like(a, 1), a) # 大于1 的部分直接用1代替， 其他保留原值
+>>> torch.where(a>1, torch.full_like(a, 1), a)  # 大于1 的部分直接用1代替， 其他保留原值
 tensor([[ 1., -2.],
         [ 1.,  0.]])
 ~~~
@@ -200,17 +199,17 @@ tensor([[ 1.4475, -0.2005, -1.8500],
 
 ### 5. Element-wise 和 归并操作
 
-Element-wise: 输出的 tensor 形状与原始的形状一致
+Element-wise：输出的 Tensor 形状与原始的形状一致
 
 ~~~python
-abs/sqrt/div/exp/fmod/log/pow...
-cos/sin/asin/atan2/cosh...
-ceil/round/floor/trunc
+abs / sqrt / div / exp / fmod / log / pow...
+cos / sin / asin / atan2 / cosh...
+ceil / round / floor / trunc
 clamp(input, min, max)
-sigmoid/tanh...
+sigmoid / tanh...
 ~~~
 
-归并操作： 输出的tensor形状小于原始的 Tensor形状
+归并操作：输出的 Tensor 形状小于原始的 Tensor形状
 
 ~~~python
 mean/sum/median/mode   # 均值/和/ 中位数/众数
@@ -226,10 +225,10 @@ cumsum/cumprd # 累加/累乘
 ##### view/resize/reshape **调整Tensor的形状**
 
 - 元素总数必须相同  
-- view 和 reshape 可以使用-1自动计算维度
+- view 和 reshape 可以使用 -1 自动计算维度
 - 共享内存
 
-! view() 操作是需要 Tensor 在内存中连续的， 这种情况下需要使用 contiguous() 操作先将内存变为连续。 对于reshape 操作， 可以看做是 `Tensor.contiguous().view()`.
+!  `view()` 操作是需要 Tensor 在内存中连续的， 这种情况下需要使用 `contiguous()` 操作先将内存变为连续。 对于reshape 操作， 可以看做是 `Tensor.contiguous().view()`.
 
 ~~~python
 >>> a = torch.Tensor(2,2)
@@ -263,7 +262,7 @@ tensor([[[-0.9699, -0.3375, -0.0178],
 >>> 
 ~~~
 
-##### squeeze(dim)/unsquence(dim)  
+##### squeeze(dim) / unsquence(dim)  
 
 处理size为1的维度， 前者用于去除size为1的维度， 而后者则是将指定的维度的size变为1
 
@@ -275,13 +274,13 @@ tensor([1, 2, 3]) # shape => torch.Size([3])
 >>> a.unqueeze(0).squeeze(0) # shape => torch.Size([3])
 ~~~
 
-##### expand/ expand_as/repeat复制元素来扩展维度
+##### expand / expand_as / repeat复制元素来扩展维度
 
-有时需要采用复制的形式来扩展 Tensor 的维度， 这时可以使用 expand， expand() 函数将 size 为 1的维度复制扩展为指定大小， 也可以用 expand_as() 函数指定为 示例 Tensor 的维度。
+有时需要采用复制的形式来扩展 Tensor 的维度， 这时可以使用 `expand`， `expand()` 函数将 size 为 1的维度复制扩展为指定大小， 也可以用 `expand_as() `函数指定为 示例 Tensor 的维度。
 
-!! expand 扩大 tensor 不需要分配新内存，只是仅仅新建一个 tensor 的视图，其中通过将 stride 设为0，一维将会扩展位更高维。
+!! `expand` 扩大 tensor 不需要分配新内存，只是仅仅新建一个 tensor 的视图，其中通过将 stride 设为0，一维将会扩展位更高维。
 
-repeat 沿着指定的维度重复 tensor。 不同于 expand()，复制的是 tensor 中的数据。
+`repeat` 沿着指定的维度重复 tensor。 不同于 `expand()`，复制的是 tensor 中的数据。
 
 ~~~python
 >>> a = torch.rand(2, 2, 1)
@@ -316,7 +315,7 @@ tensor([[[0.3094],
 
 **组合操作** 是将不同的 Tensor 叠加起来。 主要有 `cat()` 和 `torch.stack()` 两个函数，cat 即 concatenate 的意思， 是指沿着已有的数据的某一维度进行拼接， 操作后的数据的总维数不变， 在进行拼接时， 除了拼接的维度之外， 其他维度必须相同。 而` torch. stack()` 函数 指新增维度， 并按照指定的维度进行叠加。
 
-**分块操作** 是指将 Tensor 分割成不同的子Tensor，主要有 `torch.chunk()` 与 `torch.split()` 两个函数，前者需要指定分块的数量，而后者则需要指定每一块的大小，以整形或者list来表示。
+**分块操作** 是指将 Tensor 分割成不同的子 Tensor，主要有 `torch.chunk()` 与 `torch.split()` 两个函数，前者需要指定分块的数量，而后者则需要指定每一块的大小，以整形或者list来表示。
 
 ~~~python
 >>> a = torch.Tensor([[1,2,3], [4,5,6]])
@@ -358,7 +357,7 @@ svd  # 奇异值分解
 
 ##### 广播机制
 
-不同形状的Tensor 进行计算时， 可以自动扩展到较大的相同形状再进行计算。 广播机制的前提是一个Tensor 至少有一个维度，且从尾部遍历Tensor时，两者维度必须相等， 其中七个要么是1， 要么不存在
+不同形状的 Tensor 进行计算时， 可以自动扩展到较大的相同形状再进行计算。 广播机制的前提是一个 Tensor  至少有一个维度，且从尾部遍历 Tensor 时，两者维度必须相等， 其中七个要么是1， 要么不存在
 
 ##### 向量化操作
 
@@ -366,7 +365,7 @@ svd  # 奇异值分解
 
 ##### 共享内存机制
 
-(1) 直接通过 Tensor 来初始化另一个 Tensor， 或者通过 Tensor 的组合、分块、索引、变形来初始化另一个Tensor， 则这两个Tensor 共享内存:
+(1) 直接通过 Tensor 来初始化另一个 Tensor， 或者通过 Tensor 的组合、分块、索引、变形来初始化另一个Tensor， 则这两个 Tensor 共享内存:
 
 ~~~python
 >>> a = torch.randn(2,3)
@@ -379,7 +378,7 @@ tensor([[ 0.0000,  0.3898, -0.7641],
         [ 4.0000,  0.6859, -1.5179]])
 ~~~
 
-(2) 对于一些操作通过加前缀  “\_”  实现 inplace 操作， 如 `add_()` 和 `resize_()` 等， 这样操作只要被执行， 本身的 Tensor 就会被改变。
+(2) 对于一些操作通过加后缀  “\_”  实现 inplace 操作， 如 `add_()` 和 `resize_()` 等， 这样操作只要被执行， 本身的 Tensor 就会被改变。
 
 ~~~
 >>> a
@@ -398,7 +397,7 @@ b = a.numpy() # tensor -> numpy
 a = torch.from_numpy(a) # numpy -> tensor
 ~~~
 
-!! 需要注意的是，**torch.tensor() 总是会进行数据拷贝，新tensor和原来的数据不再共享内存**。所以如果你想共享内存的话，建议使用 `torch.from_numpy()` 或者 `tensor.detach()` 来新建一个tensor, 二者共享内存。
+! 需要注意的是，`torch.tensor()` 总是会进行数据拷贝，新 tensor 和原来的数据不再共享内存。所以如果你想共享内存的话，建议使用 `torch.from_numpy()` 或者 `tensor.detach()` 来新建一个 tensor, 二者共享内存。
 
 
 
@@ -628,7 +627,8 @@ from torchvision.transforms as transforms
 
 transform = transforms.Compose([
         transforms.ToTensor(), # vonvert to Tensor
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),]) # normalization
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]) # normalization
+
 dataset = ImageFolder(root, transform=transform, target_transform=None, loader=default_loader)
 dataloader = DataLoader(dataset, 2, collate_fn=my_collate_fn, num_workers=1,shuffle=True)
 for batch_datas, batch_labels in dataloader:
@@ -646,7 +646,8 @@ save_image(img, 'a.png')
 
 ~~~python
 from torchvision.transforms import ToPILImage
-show = ToPILImage()     # 可以把Tensor转成Image，方便可视化
+
+show = ToPILImage()  # 可以把Tensor转成Image，方便可视化
 
 (data, label) = trainset[100]
 show((data + 1) / 2).resize((100, 100))  # 应该会自动乘以 255 的
@@ -682,9 +683,7 @@ with torch.no_grad():                   # operations inside don't track history
 
 ~~~python
 from torch.jit import script, trace
-
 torch.jit.trace(model, torch.rand(1,3,224,224)) 　# export model
-
 @torch.jit.script
 ~~~
 
@@ -708,15 +707,12 @@ torch::Tensor output = module->forward({img_tensor}).toTensor();
 ### 16. onnx
 
 ~~~python
-torch.onnx.export(model, dummy data, xxxx.proto)       # exports an ONNX formatted
-                                                       # model using a trained model, dummy
-                                                       # data and the desired file name
+torch.onnx.export(model, dummy data, xxxx.proto) # exports an ONNX formatted
 
-model = onnx.load("alexnet.proto")                     # load an ONNX model
-onnx.checker.check_model(model)                        # check that the model
-                                                       # IR is well formed
+model = onnx.load("alexnet.proto")               # load an ONNX model
+onnx.checker.check_model(model)                  # check that the model
 
-onnx.helper.printable_graph(model.graph)               # print a human readable　representation of the graph
+onnx.helper.printable_graph(model.graph)         # print a human readable　representation of the graph
 ~~~
 
 
