@@ -1,12 +1,23 @@
 # PyTorch Cookbook
 
-- Pytorch API
-- Pytorch cookbook
-- Pytorch bugs
-- pytorch basic concept
--  pytorch code snippets
-- pytorch for mobile（Model Optimization）
-- pytorch distributed training
-- pytorch c++
-- pytorch production
-- convert tf to pytorch
+
+
+
+
+
+
+
+
+
+
+- [x] PytorchAPI
+- [ ] Pytorch cookbook
+- [ ] Pytorch bugs
+- [ ] Pytorch basic concept
+- [ ] Pytorch code snippets
+- [ ] Pytorch for mobile（Model Optimization）
+- [ ] Pytorch distributed training
+- [ ] Pytorch C++
+- [ ] Pytorch production
+- [ ] Convert TF to Pytorch
+
