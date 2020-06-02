@@ -111,28 +111,28 @@ torch.from_numpy(np.array([2, 3.3]) ) # 通过 numpy array 创建 tensor
 ##### 确定初始值的方式创建
 
 ~~~python
-ones(sizes)  # 全 1 Tensor     
-zeros(sizes)  # 全 0 Tensor
-eye(sizes)  # 对角线为1，不要求行列一致
-full(sizes, value) # 指定 value
+torch.ones(sizes)  # 全 1 Tensor     
+torch.zeros(sizes)  # 全 0 Tensor
+torch.eye(sizes)  # 对角线为1，不要求行列一致
+torch.full(sizes, value) # 指定 value
 ~~~
 
 ##### 分布
 
 ~~~python
-rand(sizes)  # 均匀分布   
-randn(sizes)   # 标准分布
+torch.rand(sizes)  # 均匀分布   
+torch.randn(sizes)   # 标准分布
 
 # 正态分布: 返回一个张量，包含从给定参数 means,std 的离散正态分布中抽取随机数。 均值 means是一个张量，包含每个输出元素相关的正态分布的均值 -> 以此张量的均值作为均值
 # std是一个张量，包含每个输出元素相关的正态分布的标准差 -> 以此张量的标准差作为标准差。 均值和标准差的形状不须匹配，但每个张量的元素个数须相同
 torch.normal(mean=torch.arange(1., 11.), std=torch.arange(1, 0, -0.1))
 tensor([-0.1987,  3.1957,  3.5459,  2.8150,  5.5398,  5.6116,  7.5512,  7.8650,
          9.3151, 10.1827])
-uniform(from,to) # 均匀分布 
+torch.uniform(from,to) # 均匀分布 
 
-arange(s, e, steps)  # 从s到e，步长为step
-linspace(s, e, num)   # 从s到e,均匀切分为 num 份, 注意linespace和arange的区别，前者的最后一个参数是生成的Tensor中元素的数量，而后者的最后一个参数是步长。
-randperm(m) # 0 到 m-1 的随机序列
+torch.arange(s, e, steps)  # 从s到e，步长为step
+torch.linspace(s, e, num)   # 从s到e,均匀切分为 num 份, 注意linespace和arange的区别，前者的最后一个参数是生成的Tensor中元素的数量，而后者的最后一个参数是步长。
+torch.randperm(m) # 0 到 m-1 的随机序列
 ~~~
 
 ### 4. 索引、比较、排序
@@ -344,6 +344,7 @@ trace  # 对角线元素之和(矩阵的迹)
 diag  # 对角线元素
 triu/tril  # 矩阵的上三角/下三角
 mm/bmm   # 矩阵的乘法， batch的矩阵乘法
+mv 　#　矩阵向量乘法
 addmm/addbmm/addmv/addr/badbmm...  # 矩阵运算
 t # 转置
 dor/cross # 内积/外积
@@ -405,6 +406,7 @@ a = torch.from_numpy(a) # numpy -> tensor
 
 ~~~python
 from torch import nn
+import torch.nn.functional as F
 ~~~
 
 ##### pad 填充
@@ -540,6 +542,8 @@ net.zero_grad()  # 网络所有梯度清零, grad 在反向传播过程中是累
 ### 11. optim -> form torch import optim
 
 ~~~python
+import torch.optim as optim
+
 optim.SGD(params, lr=0.01, momentum=0, dampening=0, weight_decay=0, nesterov=False)
 optim.ASGD(params, lr=0.01, lambd=0.0001, alpha=0.75, t0=1000000.0, weight_decay=0)
 optim.LBFGS(params, lr=1, max_iter=20, max_eval=None, tolerance_grad=1e-05, tolerance_change=1e-09, history_size=100, line_search_fn=None)
@@ -606,6 +610,7 @@ from torchvision import transforms
 
 ~~~python
 from torch.utils.data import Dataset
+
 class my_data(Dataset):
     def __init__(self, image_path, annotation_path, transform=None):
         # 初始化， 读取数据集
@@ -615,11 +620,12 @@ class my_data(Dataset):
         # 对于制定的 id, 读取该数据并返回    
 ~~~
 
-##### datasets
-
 **datasets**
 
 ~~~python
+from torch.utils.data import Dataset, Dataloader
+from torchvision.transforms as transforms
+
 transform = transforms.Compose([
         transforms.ToTensor(), # vonvert to Tensor
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),]) # normalization
@@ -668,5 +674,57 @@ for input, target in train_loader:
 with torch.no_grad():                   # operations inside don't track history
     for input, target in test_loader:
         ...
+~~~
+
+
+
+### 15. jit & torchscript
+
+~~~python
+from torch.jit import script, trace
+
+torch.jit.trace(model, torch.rand(1,3,224,224)) 　# export model
+
+@torch.jit.script
+~~~
+
+~~~cpp
+#include <torch/torch.h>
+#include <torch/script.h>
+
+# img blob -> img tensor
+torch::Tensor img_tensor = torch::from_blob(image.data, {1, image.rows, image.cols, 3}, torch::kByte);
+img_tensor = img_tensor.permute({0, 3, 1, 2});
+img_tensor = img_tensor.toType(torch::kFloat);
+img_tensor = img_tensor.div(255);
+# load model
+std::shared_ptr<torch::jit::script::Module> module = torch::jit::load("resnet.pt");
+# forward
+torch::Tensor output = module->forward({img_tensor}).toTensor();
+~~~
+
+
+
+### 16. onnx
+
+~~~python
+torch.onnx.export(model, dummy data, xxxx.proto)       # exports an ONNX formatted
+                                                       # model using a trained model, dummy
+                                                       # data and the desired file name
+
+model = onnx.load("alexnet.proto")                     # load an ONNX model
+onnx.checker.check_model(model)                        # check that the model
+                                                       # IR is well formed
+
+onnx.helper.printable_graph(model.graph)               # print a human readable　representation of the graph
+~~~
+
+
+
+### 17. Distributed Training
+
+~~~python
+import torch.distributed as dist          # distributed communication
+from multiprocessing import Process       # memory sharing processes
 ~~~
 
