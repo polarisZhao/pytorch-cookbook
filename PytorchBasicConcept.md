@@ -113,8 +113,8 @@ tensor([1., 1., 1., 1., 1.], dtype=torch.float64, requires_grad=True)
 
 **ToPILImage:**
 
-- 取值范围:  [0, 1.0] ->  [0, 255]
+- 取值范围:  [0, 1.0] -->  [0, 255]
 
-- NCHW -> NHWC**
+- NCHW --> NHWC
 
 - 类型: FloatTensor -> numpy Uint8 -> PILImage
