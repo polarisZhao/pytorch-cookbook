@@ -1,0 +1,4 @@
+torch==1.3.0+cu100
+numpy==1.18.4
+torchvision==0.6.0+cu101
+Pillow==7.1.2
