@@ -4,8 +4,8 @@
 
 - [x] PytorchAPI
 - [x] PytorchBasicConcept
-- [ ] Pytorch cookbook
-- [ ] Pytorch bugs
+- [x] Pytorch cookbook
+- [x] PytorchBugs
 - [ ] Pytorch code snippets
 - [ ] Pytorch for mobile（Model Optimization）
 - [ ] Pytorch distributed training
