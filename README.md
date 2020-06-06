@@ -6,7 +6,7 @@
 - [x] PytorchBasicConcept
 - [x] Pytorch cookbook
 - [x] PytorchBugs
-- [ ] Pytorch code snippets
+- [x] PytorchTemplate
 - [ ] Pytorch for mobile（Model Optimization）
 - [ ] Pytorch distributed training
 - [ ] Pytorch C++
