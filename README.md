@@ -1,50 +1,8 @@
 # PyTorch Cookbook
 
-#### 第一章  几个常见的基本概念的区分 [alpha]
+[TOC]
 
-#### 第二章   Pytorch API [alpha]
-
-#### 第三章  如何搭建一个网络模型 [alpha]
-
-#### 第四章  常用代码片段
-
-####　第五章  常用工具包 [alpha]
-
-#### 第六章  网络加速与优化
-
-- 如何搭建一个节省内存的网络
-- 网络加速(半精度混合训练)
-- 如何加速数据集的读取
-
-#### 第七章　分布式训练
-
-- torch.distributed
-- horovod
-
-####　第八章　移动端部署
-
-- 模型压缩和加速(量化、剪枝)
-
-- Pytorch to onnx to X
-
-####　第九章　服务器端部署
-
-- flask_api
-- TensorRT
-
-#### 第十章   To do or not to do
-
-#### 第十一章　最佳实践
-
-####　附录 [appendix]  [alpha]
-
-1. Pytorch 常见的 bug
-
-2. 一个常用模板
-
-
-
-# Basic concept
+## 一. Basic concept [alpha]
 
 ### 1. numpy array 和 Tensor(CPU & GPU)
 
@@ -109,6 +67,8 @@ tensor([1., 1., 1., 1., 1.], dtype=torch.float64, requires_grad=True)
 >
 >- `torch.no_grad()` impacts the autograd engine and deactivate it. It will reduce memory usage and speed up computations but you won’t be able to backprop (which you don’t want in an eval script).
 
+`model.eval()`和`torch.no_grad()`的区别在于，`model.eval()`是将网络切换为测试状态，例如BN和随机失活（dropout）在训练和测试阶段使用不同的计算方法。`torch.no_grad()`是关闭PyTorch张量的自动求导机制，以减少存储使用和加速计算，得到的结果无法进行`loss.backward()`
+
 ### 5. xx.data 和 xx.detach()
 
 ​      在 0.4.0 版本之前,  .data 的语义是 获取 Variable 的 内部 Tensor, 在 0.4.0 版本将 Variable 和 Tensor merge 之后,  `.data` 和之前有类似的语义， 也是内部的 Tensor 的概念。`x.data` 与 `x.detach()` 返回的 tensor 有相同的地方, 也有不同的地方:
@@ -169,10 +129,21 @@ image = PIL.Image.fromarray(torch.clamp(tensor * 255, min=0, max=255
 image = torchvision.transforms.functional.to_pil_image(tensor) 
 ~~~
 
+### 7. torch.nn.xxx 与 torch.nn.functional.xxx
+
+建议统一使用　`torch.nn.xxx`　模块，`torch.functional.xxx` 可能会在下一个版本中去掉。
+
+`torch.nn`　模块和　`torch.nn.functional`　的区别在于，`torch.nn`　模块在计算时底层调用了`torch.nn.functional`，但　`torch.nn`　模块包括该层参数，还可以应对训练和测试两种网络状态。使用　`torch.nn.functional`　时要注意网络状态，如:
+
+~~~python
+def forward(self, x):
+    ...
+    x = torch.nn.functional.dropout(x, p=0.5, training=self.training)
+~~~
 
 
 
-# Pytorch API
+## 二. Pytorch API [alpha]
 
 ### 1. import torch
 
@@ -423,7 +394,7 @@ cumsum/cumprd # 累加/累乘
 
 ### 6. 变形操作
 
-##### view/resize/reshape **调整Tensor的形状**
+##### view/resize/reshape  调整Tensor的形状
 
 - 元素总数必须相同  
 - view 和 reshape 可以使用 -1 自动计算维度
@@ -508,6 +479,12 @@ tensor([[[0.3094],
          [0.8652],
          [0.0950],
          [0.8652]]])
+~~~
+
+##### 使用切片操作扩展多个维度
+
+~~~
+b = a[:,None, None,:] # None 处的维度为１
 ~~~
 
 ### 7. 组合与分块
@@ -693,6 +670,7 @@ nn.Sequential(*args)
 ~~~python
 nn.BCELoss(weight=None, size_average=True, reduce=True)
 nn.CrossEntropyLoss(weight=None, size_average=True, ignore_index=-100, reduce=True)
+# CrossEntropyLoss 等价于 log_softmax + NLLLoss
 nn.L1Loss(size_average=True, reduce=True)
 nn.KLDivLoss(size_average=True, reduce=True)
 nn.MSELoss(size_average=True, reduce=True)
@@ -740,7 +718,8 @@ class net_name(nn.Module):
 
 net.parameters()   # 获取参数 
 net.named_parameters  # 获取参数及名称
-net.zero_grad()  # 网络所有梯度清零, grad 在反向传播过程中是累加的(accumulated)，这意味着每一次运行反向传播，梯度都会累加之前的梯度，所以反向传播之前需把梯度清零。
+net.zero_grad()  # 网络所有梯度清零, grad 在反向传播过程中是累加的(accumulated)，
+                 # 这意味着每一次运行反向传播，梯度都会累加之前的梯度，所以反向传播之前需把梯度清零。
 ~~~
 
 ### 11. optim -> form torch import optim
@@ -762,6 +741,23 @@ optim.Optimizer(params, defaults)
 
 optimizer.zero_grad()  # 等价于 net.zero_grad() 
 optimizer.step()
+~~~
+
+### 12.  learning rate
+
+~~~python
+# Reduce learning rate when validation accuarcy plateau.
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', patience=5, verbose=True)
+# Cosine annealing learning rate.
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=80)
+# Reduce learning rate by 10 at given epochs.
+scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50, 70], gamma=0.1)
+# Learning rate warmup by 10 epochs.
+scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda t: t / 10)
+
+for t in range(0, 10):
+    scheduler.step()
+    train(...); val(...)
 ~~~
 
 ### 12. save and load model
@@ -857,8 +853,6 @@ show = ToPILImage()  # 可以把Tensor转成Image，方便可视化
 show((data + 1) / 2).resize((100, 100))  # 应该会自动乘以 255 的
 ~~~
 
-
-
 ### 14. Code Samples
 
 ~~~python
@@ -880,8 +874,6 @@ with torch.no_grad():                   # operations inside don't track history
     for input, target in test_loader:
         ...
 ~~~
-
-
 
 ### 15. jit & torchscript
 
@@ -906,8 +898,6 @@ std::shared_ptr<torch::jit::script::Module> module = torch::jit::load("resnet.pt
 torch::Tensor output = module->forward({img_tensor}).toTensor();
 ~~~
 
-
-
 ### 16. onnx
 
 ~~~python
@@ -919,8 +909,6 @@ onnx.checker.check_model(model)                  # check that the model
 onnx.helper.printable_graph(model.graph)         # print a human readable　representation of the graph
 ~~~
 
-
-
 ### 17. Distributed Training
 
 ~~~python
@@ -930,9 +918,9 @@ from multiprocessing import Process       # memory sharing processes
 
 
 
-# How to Build a network
+## 三. How to Build a network
 
-#### 基本工作流程
+### 基本工作流程
 
 1. 相关工作调研:  **评价指标、数据集、经典解决方案、待解决问题和已有方案的不同、精度和速度预估、相关难点 ! **
 
@@ -946,7 +934,7 @@ from multiprocessing import Process       # memory sharing processes
 
 ##### (1) 构建神经网络
 
-自定义的网络继承自一般继承自　nn.Module类，　必须有一个 forward 方法来实现各个层或操作的 forward 传递，　
+自定义的网络继承自一般继承自　nn.Module 类，　必须有一个 forward 方法来实现各个层或操作的 forward 传递，　
 
 对于具有**单个输入**和**单个输出**的简单网络，请使用以下模式：
 
@@ -978,7 +966,7 @@ class SimpleNetwork(nn.Module):
 
 我们建议将网络拆分为更小的**可重用部分**。网络由操作或其它网络模块组成。损失函数也是神经网络的模块，因此可以直接集成到网络中。
 
-##### (2)　自定义数据集
+##### (2) 自定义数据集
 
 ~~~python
 class CustomDataset(Dataset):
@@ -1025,7 +1013,7 @@ class CustomLoss(nn.Module):
         return torch.mean(torch.square(x  - y))
 ~~~
 
-#### (4) 推荐使用的用于训练模型的代码结构
+##### (4) 推荐使用的用于训练模型的代码结构
 
 ~~~python
 # import statements
@@ -1074,14 +1062,15 @@ if args.resume:
         print("=> no checkpoint found at '{}'".format(args.resume))
 
 def train(epoch):
-    model.train()
+    model.train()　# 在　model(x)　前需要添加　model.eval()　或者　model.eval()
 
     avg_loss = 0.0
     train_acc = 0.0
     for batch_idx, batchdata in enumerate(train_loader):
         data, target = batchdata["data"], batchdata["target"] #
         data, target = data.to(device), target.to(device)  #
-        optimizer.zero_grad()
+        # 在 loss.backward()　前用　optimizer.zero_grad()　清除累积梯度
+        optimizer.zero_grad() # optimizer.zero_grad　与　model.zero_grad效果一样
 
         predict = model(data) # 
         loss = criterion(predict, target) #
@@ -1140,39 +1129,599 @@ for epoch in range(args.start_epoch, args.epochs):
 
 
 
-# 常见代码片段
+## 四. 常见代码片段
 
-#### 模型
+### 1. 基础配置
+
+##### (1) check pytorch version
+
+~~~python
+torch.__version__               # PyTorch version
+torch.version.cuda              # Corresponding CUDA version
+torch.backends.cudnn.version()  # Corresponding cuDNN version
+torch.cuda.get_device_name(0)   # GPU type
+~~~
+
+##### (2) update pytorch
+
+~~~
+conda update pytorch torchvision -c pytorch
+~~~
+
+##### (3) random seed setting 
+
+~~~
+torch.manual_seed(0)
+torch.cuda.manual_seed_all(0)
+~~~
+
+##### (4) 指定程序运行在特定显卡上：
+
+在命令行指定环境变量
+
+```
+CUDA_VISIBLE_DEVICES=0,1 python train.py
+```
+
+在代码中指定
+
+~~~
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+~~~
+
+##### (5) 判断是否有CUDA支持
+
+```
+torch.cuda.is_available()
+torch.set_default_tensor_type('torch.cuda.FloatTensor')   
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+```
+
+##### (6) 设置为cuDNN benchmark模式
+
+Benchmark模式会提升计算速度，但是由于计算中有随机性，每次网络前馈结果略有差异。
+
+~~~
+toch.backends.cudnn.benchmark = True
+~~~
+
+如果想要避免这种结果波动，设置
+
+~~~
+torch.backends.cudnn.deterministic = True
+~~~
+
+##### (7) 手动清除GPU存储
+
+有时Control-C中止运行后GPU存储没有及时释放，需要手动清空。在PyTorch内部可以
+
+~~~
+torch.cuda.empty_cache() 
+~~~
+
+或在命令行可以先使用ps找到程序的PID，再使用kill结束该进程
+
+~~~
+ ps aux | grep python    kill -9 [pid] 
+~~~
+
+或者直接重置没有被清空的GPU
+
+~~~
+nvidia-smi --gpu-reset -i [gpu_id]
+~~~
+
+### 2. 模型
+
+##### (1) 提取ImageNet预训练模型某层的卷积特征
+
+~~~
+# VGG-16 relu5-3 feature.
+model = torchvision.models.vgg16(pretrained=True).features
+# VGG-16 pool5 feature.
+model = torchvision.models.vgg16(pretrained=True)
+model = torch.nn.Sequential(model.features, model.avgpool)
+# VGG-16 fc7 feature.
+model = torchvision.models.vgg16(pretrained=True)
+model.classifier = torch.nn.Sequential(*list(model.classifier.children())[:-3])
+# ResNet GAP feature.
+model = torchvision.models.resnet18(pretrained=True)
+model = torch.nn.Sequential(collections.OrderedDict(
+    list(model.named_children())[:-1]))
+
+with torch.no_grad():
+    model.eval()
+    conv_representation = model(image)
+~~~
+
+##### (2) 提取ImageNet预训练模型多层的卷积特征
+
+~~~
+class FeatureExtractor(torch.nn.Module):
+    """Helper class to extract several convolution features from the given
+    pre-trained model.
+
+    Attributes:
+        _model, torch.nn.Module.
+        _layers_to_extract, list<str> or set<str>
+
+    Example:
+        >>> model = torchvision.models.resnet152(pretrained=True)
+        >>> model = torch.nn.Sequential(collections.OrderedDict(
+                list(model.named_children())[:-1]))
+        >>> conv_representation = FeatureExtractor(
+                pretrained_model=model,
+                layers_to_extract={'layer1', 'layer2', 'layer3', 'layer4'})(image)
+    """
+    def __init__(self, pretrained_model, layers_to_extract):
+        torch.nn.Module.__init__(self)
+        self._model = pretrained_model
+        self._model.eval()
+        self._layers_to_extract = set(layers_to_extract)
+    
+    def forward(self, x):
+        with torch.no_grad():
+            conv_representation = []
+            for name, layer in self._model.named_children():
+                x = layer(x)
+                if name in self._layers_to_extract:
+                    conv_representation.append(x)
+            return conv_representation
+~~~
+
+##### (３)  部分层使用预训练模型
+
+注意如果保存的模型是`torch.nn.DataParallel`，则当前的模型也需要是`torch.nn.DataParallel`。`torch.nn.DataParallel(model).module == model`。
+
+~~~
+   model.load_state_dict(torch.load('model,pth'), strict=False)
+~~~
+
+将在GPU保存的模型加载到CPU:
+
+~~~
+   model.load_state_dict(torch.load('model,pth', map_location='cpu'))
+~~~
+
+##### （４）fine-tune 微调全连接层
+
+##### (4) 微调全连接层
+
+~~~
+model = torchvision.models.resnet18(pretrained=True)
+for param in model.parameters():
+    param.requires_grad = False
+model.fc = nn.Linear(512, 100)  # Replace the last fc layer
+optimizer = torch.optim.SGD(model.fc.parameters(), lr=1e-2, momentum=0.9, weight_decay=1e-4)
+~~~
+
+以较大学习率微调全连接层，较小学习率微调卷积层
+
+~~~
+model = torchvision.models.resnet18(pretrained=True)
+finetuned_parameters = list(map(id, model.fc.parameters()))
+conv_parameters = (p for p in model.parameters() if id(p) not in finetuned_parameters)
+parameters = [{'parameters': conv_parameters, 'lr': 1e-3}, 
+              {'parameters': model.fc.parameters()}]
+optimizer = torch.optim.SGD(parameters, lr=1e-2, momentum=0.9, weight_decay=1e-4)
+~~~
+
+##### （５）保存与加载断点
+
+注意为了能够恢复训练，我们需要同时保存模型和优化器的状态，以及当前的训练轮数。
+
+~~~
+# Save checkpoint.
+is_best = current_acc > best_acc
+best_acc = max(best_acc, current_acc)
+checkpoint = {
+    'best_acc': best_acc,    
+    'epoch': t + 1,
+    'model': model.state_dict(),
+    'optimizer': optimizer.state_dict(),
+}
+model_path = os.path.join('model', 'checkpoint.pth.tar')
+torch.save(checkpoint, model_path)
+if is_best:
+    shutil.copy('checkpoint.pth.tar', model_path)
+
+# Load checkpoint.
+if resume:
+    model_path = os.path.join('model', 'checkpoint.pth.tar')
+    assert os.path.isfile(model_path)
+    checkpoint = torch.load(model_path)
+    best_acc = checkpoint['best_acc']
+    start_epoch = checkpoint['epoch']
+    model.load_state_dict(checkpoint['model'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    print('Load checkpoint at epoch %d.' % start_epoch)
+~~~
+
+##### (６) 计算模型参数量[D]
+
+~~~
+# Total parameters                    
+num_params = sum(p.numel() for p in model.parameters()) 
+# Trainable parameters
+num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)  
+~~~
+
+##### (７) 模型权值初始化[D]
+
+注意`model.modules()`和`model.children()`的区别：`model.modules()`会迭代地遍历模型的所有子层，而`model.children()`只会遍历模型下的一层。
+
+~~~python
+# Common practise for initialization.
+for m in model.modules():
+    if isinstance(m, torch.nn.Conv2d):
+        torch.nn.init.kaiming_normal_(m.weight, mode='fan_out',
+                                      nonlinearity='relu')
+        if m.bias is not None:
+            torch.nn.init.constant_(m.bias, val=0.0)
+    
+    elif isinstance(m, torch.nn.BatchNorm2d):
+        torch.nn.init.constant_(m.weight, 1.0)
+        torch.nn.init.constant_(m.bias, 0.0)
+  
+    elif isinstance(m, torch.nn.Linear):
+        torch.nn.init.xavier_normal_(m.weight)
+        if m.bias is not None:
+            torch.nn.init.constant_(m.bias, 0.0)
+
+# Initialization with given tensor.
+m.weight = torch.nn.Parameter(tensor)
+~~~
+
+### 3. 数据
+
+##### (1) 常见训练和验证数据预处理
+
+ToTensor操作会将PIL.Image或形状为H×W×D，数值范围为[0, 255]的np.ndarray转换为形状为D×H×W，数值范围为[0.0, 1.0]的torch.Tensor。
+
+~~~
+train_transform = torchvision.transforms.Compose([
+    torchvision.transforms.RandomResizedCrop(size=224,
+                                             scale=(0.08, 1.0)),
+    torchvision.transforms.RandomHorizontalFlip(),
+    torchvision.transforms.ToTensor(),
+    torchvision.transforms.Normalize(mean=(0.485, 0.456, 0.406),
+                                     std=(0.229, 0.224, 0.225)),
+ ])
+ val_transform = torchvision.transforms.Compose([
+    torchvision.transforms.Resize(224),
+    torchvision.transforms.CenterCrop(224),
+    torchvision.transforms.ToTensor(),
+    torchvision.transforms.Normalize(mean=(0.485, 0.456, 0.406),
+                                     std=(0.229, 0.224, 0.225)),
+])
+~~~
+
+### 4. 训练
+
+##### (1) 将整数标记转换成独热（one-hot）编码  
+
+ (PyTorch中的标记默认从0开始)
+
+~~~
+   N = tensor.size(0)
+   one_hot = torch.zeros(N, num_classes).long()
+   one_hot.scatter_(dim=1, index=torch.unsqueeze(tensor, dim=1), src=torch.ones(N, num_classes).long())
+~~~
+
+##### (2) 计算两组数据之间的两两欧式距离
+
+~~~
+# X1 is of shape m*d.
+X1 = torch.unsqueeze(X1, dim=1).expand(m, n, d)
+# X2 is of shape n*d.
+X2 = torch.unsqueeze(X2, dim=0).expand(m, n, d)
+# dist is of shape m*n, where dist[i][j] = sqrt(|X1[i, :] - X[j, :]|^2)
+dist = torch.sqrt(torch.sum((X1 - X2) ** 2, dim=2))
+~~~
+
+##### (3) 双线性汇合（bilinear pooling）
+
+~~~
+X = torch.reshape(N, D, H * W)                        # Assume X has shape N*D*H*W
+X = torch.bmm(X, torch.transpose(X, 1, 2)) / (H * W)  # Bilinear pooling
+assert X.size() == (N, D, D)
+X = torch.reshape(X, (N, D * D))
+X = torch.sign(X) * torch.sqrt(torch.abs(X) + 1e-5)   # Signed-sqrt normalization
+X = torch.nn.functional.normalize(X)                  # L2 normalization
+~~~
+
+##### (4) L1 正则化
+
+~~~
+l1_regularization = torch.nn.L1Loss(reduction='sum')
+loss = ...  # Standard cross-entropy loss
+for param in model.parameters():
+    loss += torch.sum(torch.abs(param))
+loss.backward()
+
+
+reg = 1e-6
+l2_loss = Variable(torch.FloatTensor(1), requires_grad=True)
+for name, param in model.named_parameters():
+    if 'bias' not in name:
+        l2_loss = l2_loss + (0.5 * reg * torch.sum(torch.pow(W, 2)))
+~~~
+
+##### (5) 不对偏置项进行L2正则化/权值衰减（weight decay）
+
+~~~
+bias_list = (param for name, param in model.named_parameters() if name[-4:] == 'bias')
+others_list = (param for name, param in model.named_parameters() if name[-4:] != 'bias')
+parameters = [{'parameters': bias_list, 'weight_decay': 0},                
+              {'parameters': others_list}]
+optimizer = torch.optim.SGD(parameters, lr=1e-2, momentum=0.9, weight_decay=1e-4)
+~~~
+
+##### (6) 梯度裁剪（gradient clipping）
+
+ ~~~
+torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=20)
+ ~~~
+
+##### (7) 计算Softmax 输出的正确率
+
+~~~
+score = model(images)
+prediction = torch.argmax(score, dim=1)
+num_correct = torch.sum(prediction == labels).item()
+accuruacy = num_correct / labels.size(0)
+~~~
+
+##### (8) 获取当前学习率
+
+~~~
+# If there is one global learning rate (which is the common case).
+lr = next(iter(optimizer.param_groups))['lr']
+# If there are multiple learning rates for different layers.
+all_lr = []
+for param_group in optimizer.param_groups:
+    all_lr.append(param_group['lr'])
+~~~
+
+### 5. Trick
+
+##### (1)  label smothing
+
+~~~
+for images, labels in train_loader:
+    images, labels = images.cuda(), labels.cuda()
+    N = labels.size(0)
+    # C is the number of classes.
+    smoothed_labels = torch.full(size=(N, C), fill_value=0.1 / (C - 1)).cuda()
+    smoothed_labels.scatter_(dim=1, index=torch.unsqueeze(labels, dim=1), value=0.9)
+
+    score = model(images)
+    log_prob = torch.nn.functional.log_softmax(score, dim=1)
+    loss = -torch.sum(log_prob * smoothed_labels) / N
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+~~~
+
+##### (2) Mixup
+
+~~~
+beta_distribution = torch.distributions.beta.Beta(alpha, alpha)
+for images, labels in train_loader:
+    images, labels = images.cuda(), labels.cuda()
+
+    # Mixup images.
+    lambda_ = beta_distribution.sample([]).item()
+    index = torch.randperm(images.size(0)).cuda()
+    mixed_images = lambda_ * images + (1 - lambda_) * images[index, :]
+
+    # Mixup loss.    
+    scores = model(mixed_images)
+    loss = (lambda_ * loss_function(scores, labels) 
+            + (1 - lambda_) * loss_function(scores, labels[index]))
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+~~~
+
+##### (3) 多卡同步BN（Batch normalization）
+
+当使用torch.nn.DataParallel将代码运行在多张GPU卡上时，PyTorch的BN层默认操作是各卡上数据独立地计算均值和标准差，同步BN使用所有卡上的数据一起计算BN层的均值和标准差，缓解了当批量大小（batch size）比较小时对均值和标准差估计不准的情况，是在目标检测等任务中一个有效的提升性能的技巧。
+
+参见： [Synchronized-BatchNorm-PyTorchgithub](vacancy/Synchronized-BatchNorm-PyTorchgithub.com)
+
+
+
+## 五. 网络优化和加速
+
+### 1. 数据
+
+`torch.utils.data.DataLoader`中尽量设置 `pin_memory=True`，对特别小的数据集如 MNIST 设置 `pin_memory=False`  反而更快一些。
+
+- `num_workers` 的设置需要在实验中找到最快的取值。
+- 用`del`及时删除不用的中间变量，节约GPU存储。
+- 使用`inplace`操作可节约 GPU 存储，如
+
+ ~~~
+x = torch.nn.functional.relu(x, inplace=True)
+ ~~~
+
+- 减少CPU和GPU之间的数据传输。例如， 如果你想知道一个 epoch 中每个 mini-batch 的 loss 和准确率，先将它们累积在 GPU 中等一个 epoch 结束之后一起传输回 CPU 会比每个 mini-batch 都进行一次 GPU 到 CPU 的传输更快。
+- 使用半精度浮点数`half()`会有一定的速度提升，具体效率依赖于GPU型号。需要小心数值精度过低带来的稳定性问题。时常使用 `assert tensor.size() == (N, D, H, W)`作为调试手段，确保张量维度和你设想中一致。
+- 除了标记 y 外，尽量少使用一维张量，使用n*1的二维张量代替，可以避免一些意想不到的一维张量计算结果。
+- 统计代码各部分耗时
+
+~~~python
+with torch.autograd.profiler.profile(enabled=True, use_cuda=False) as profile:
+    ...
+    print(profile)
+~~~
+
+或者在命令行运行：
+
+~~~
+python -m torch.utils.bottleneck main.py
+~~~
+
+dataloader方面：
+
+1. DataLoader的参数中，
+
+2. 1. num_workers与batch_size调到合适值，并非越大越快（注意后者也影响模型性能）
+   2. eval/test时shuffle=False
+   3. 内存够大的情况下，dataloader的**pin_memory**设为True，并用data_prefetcher技巧（[方法](https://zhuanlan.zhihu.com/p/80695364)）
+
+3. 把不怎么会更改的**预处理提前做好** 保存到硬盘上，不要放dataloader里做，尤其对图像视频的操作。
+
+4. **减少IO**操作，服务器如果是hdd根本架不住多人对磁盘的折磨，曾经几个小伙伴把服务器弄得卡到无法login...可先多线程把数据放到内存，不太会的话可以先用个dataloader专门把数据先读到list中（即内存），然后把这个list作为每次取数据的池。还可以用tmpfs把内存当硬盘，不过需要权限
+
+5. prefetch_generator（[方法](https://zhuanlan.zhihu.com/p/80695364)）让读数据的worker能在运算时预读数据，而默认是数据清空时才读
 
 
 
 
 
+model方面：
 
+1. 用**float16**代替默认的float32运算（[方法参考](https://link.zhihu.com/?target=https%3A//github.com/huggingface/transformers/blob/dad3c7a485b7ffc6fd2766f349e6ee845ecc2eee/examples/run_classifier.py)，搜索"fp16"可以看到需要修改之处，包括model、optimizer、backward、learning rate）
+2. **优化器**以及对应参数的选择，如learning rate，不过它对性能的影响似乎更重要【占坑】
+3. 少用循环，多用**向量化**操作
+4. 经典操作尽量用别人优化好的**库**，别自己写（想自己实现锻炼能力除外）
+5. 数据很多时少用append，虽然使用很方便，不过它每次都会重新分配空间？所以数据很大的话，光一次append就要几秒（测过），可以先分配好整个容器大小，每次用索引去修改内容，这样一步只要0.0x秒
+6. 固定对模型影响不大的部分参数，还能节约显存，可以用detach()切断反向传播，注意若仅仅给变量设置required_grad=False 还是会计算梯度的
+7. eval/test的时候，加上model.eval()和torch.no_grad()，前者固定batch-normalization和dropout 但是会影响性能，后者关闭autograd
+8. 提高程序**并行度**，例如 我想train时对每个epoch都能test一下以追踪模型性能变化，但是test时间成本太高要一个小时，所以写了个socket，设一个127.0.0.1的端口，每次train完一个epoch就发个UDP过去，那个进程就可以自己test，同时原进程可以继续train下一个epoch（对 这是自己想的诡异方法hhh）
 
-####　数据
+其他：
 
-
-
-
-
-
-
-#### 训练
-
-
-
-
-
-#### Trick
+1. torch.backends.cudnn.benchmark设为True，可以让cudnn根据当前训练各项config寻找优化算法，但这本身需要时间，所以input size在训练时会频繁变化的话，建议设为False
 
 
 
+## 六. 分布式训练
+
+os.environ['NCCL_SOCKET_IFNAME'] = 'enp2s0'
+
+#### nn.DataParallel
+
+~~~
+gpus = [0, 1, 2, 3]
+torch.cuda.set_device('cuda:{}'.format(gpus[0]))
+
+model = nn.DataParallel(model.to(device), device_ids=gpus, output_device=gpus[0])
+~~~
+
+#### torch.distributed
+
+~~~
+parser = argparse.ArgumentParser()
+parser.add_argument('--backend', type=str, default='nccl', help='Name of the backend to use.')
+parser.add_argument('-i',
+                    '--init-method',
+                    type=str,
+                    default='env://',
+                    help='URL specifying how to initialize the package.')
+parser.add_argument('-ws', '--world-size', type=int, default=1, help='Number of processes participating in the job.')
+parser.add_argument('-r', '--rank', type=int, default=0, help='Rank of the current process.')
+args = parser.parse_args()
+~~~
+
+~~~
+distributed.init_process_group(
+    backend=args.backend,
+    init_method=args.init_method,
+    world_size=args.world_size,
+    rank=args.rank,
+)
+~~~
+
+~~~
+train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=..., sampler=train_sampler)
+~~~
+
+~~~
+model = nn.parallel.DistributedDataParallel(model)
+~~~
+
+####　torch.multiprocessing
+
+~~~
+import torch.multiprocessing as mp
+mp.spawn(main_worker, nprocs=4, args=(4, myargs))
+~~~
+
+#### APEX
+
+~~~
+from apex import amp
+from apex.parallel import DistributedDataParallel
+~~~
+
+~~~
+model, optimizer = amp.initialize(model, optimizer)
+model = DistributedDataParallel(model)
+
+with amp.scale_loss(loss, optimizer) as scaled_loss:
+   scaled_loss.backward()
+~~~
+
+#### Horovod
+
+```
+import horovod.torch as hvd
+
+hvd.local_rank()
+```
+
+~~~
+hvd.init()
+~~~
+
+~~~
+train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=..., sampler=train_sampler)
+~~~
+
+~~~
+hvd.broadcast_parameters(model.state_dict(), root_rank=0)
+~~~
+
+~~~
+hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters(), compression=hvd.Compression.fp16)
+~~~
 
 
-# ToolBox
 
-####　1. 预训练模型
+## 七. 移动端部署
+
+- 模型压缩和加速(量化、剪枝)
+- Pytorch to onnx to X
+
+
+
+## 八. 服务器端部署 
+
+- flask_api
+- TensorRT
+
+
+
+
+
+## 九. 最佳实践(To do or not to do)
+
+**在「nn.Module」的「forward」方法中避免使用 Numpy 代码**
+
+Numpy 是在 CPU 上运行的，它比 torch 的代码运行得要慢一些。由于 torch 的开发思路与 numpy 相似，所以大多数  中的函数已经在 PyTorch 中得到了支持。
+
+
+
+## 十. ToolBox [alpha]
+
+### 1. 预训练模型
 
 https://github.com/Cadene/pretrained-models.pytorch
 
@@ -1180,17 +1729,17 @@ https://github.com/rwightman/pytorch-image-models
 
 https://github.com/welkin-feng/ComputerVision
 
-####　2. 数据增强
+### 2. 数据增强
 
 https://github.com/albumentations-team/albumentations
 
-#### 3. 标记工具
+### 3. 标记工具
 
 [**Labelme:**](https://github.com/wkentaro/labelme) Image Polygonal Annotation with Python
 
 [**LabelImg**](https://github.com/tzutalin/labelImg)：LabelImg is a graphical image annotation tool and label object bounding boxes in images
 
-#### 4. 数据集查找
+### 4. 数据集查找
 
 论文的评测指标　=> datasets
 
@@ -1210,7 +1759,7 @@ https://github.com/albumentations-team/albumentations
 
 **Government Datasets:** [**EU**](https://data.europa.eu/euodp/data/dataset) [**US**](https://www.data.gov/) [**NZL**](https://catalogue.data.govt.nz/dataset) [**IND**](https://data.gov.in/)
 
-####　5. 模型分析工具
+### 5. 模型分析工具
 
 ##### (1) 卷积层输出大小计算
 
@@ -1226,7 +1775,7 @@ https://github.com/sksq96/pytorch-summary
 
 [**Graphviz:**](https://github.com/szagoruyko/pytorchviz) **Pytorch**
 
-#### 6. 可视化工具
+### 6. 可视化工具
 
 [visdom](https://github.com/facebookresearch/visdom)
 
@@ -1289,7 +1838,7 @@ for i in range(100):
                                     'tanx': np.tan(i/r)}, i)
 ```
 
-#### 7. Pytorch 加速
+### 7. Pytorch 加速
 
 **NVIDIA/DLAI: ** https://github.com/NVIDIA/DALI
 
@@ -1299,7 +1848,7 @@ for i in range(100):
 
 
 
-# 参考链接
+## 参考链接 [alpha]
 
 - Tensorflow cookbook
 
