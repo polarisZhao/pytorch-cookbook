@@ -1372,6 +1372,14 @@ for m in model.modules():
 m.weight = torch.nn.Parameter(tensor)
 ~~~
 
+##### (8) 冻结参数
+
+~~~
+if not requires_grad:
+    for param in self.parameters():
+        param.requires_grad = False
+~~~
+
 ### 3. 数据
 
 ##### (1) 常见训练和验证数据预处理
