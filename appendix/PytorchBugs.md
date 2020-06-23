@@ -438,11 +438,28 @@ input_B = output_A.detach()
 
 
 
-**十一. 基本用法**
+### 十一. 基本用法
 
 **Q: Pytorch 如何忽略警告**
 
 ~~~python
 python3 -W ignore::UserWarning xxxx.py
+~~~
+
+
+
+
+
+### 十二. ONNX
+
+```
+ONNX's Upsample/Resize operator did not match Pytorch's Interpolation until opset 11. Attributes to determine how to transform the input were added in onnx:Resize in opset 11 to support Pytorch's behavior (like coordinate_transformation_mode and nearest_mode).
+```
+
+警告信息已经完整说明，**ONNX's Upsample/Resize operator did not match Pytorch's Interpolation until opset 11.**，因此将ONNX的导出代码中规定其版本，具体如下：
+
+~~~python
+import torch
+torch.onnx.export(model, ..., opset_version=11)
 ~~~
 
