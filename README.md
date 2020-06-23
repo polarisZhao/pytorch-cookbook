@@ -1533,24 +1533,101 @@ for images, labels in train_loader:
 
 
 
-## 五. 网络优化和加速
+## 五. 网络优化和加速 [alpha]
 
 ### 1. 数据
 
-`torch.utils.data.DataLoader`中尽量设置 `pin_memory=True`，对特别小的数据集如 MNIST 设置 `pin_memory=False`  反而更快一些。
+##### (0) dataloader
 
-- `num_workers` 的设置需要在实验中找到最快的取值。
-- 用`del`及时删除不用的中间变量，节约GPU存储。
-- 使用`inplace`操作可节约 GPU 存储，如
+- num_workers与batch_size调到合适值，并非越大越快（注意后者也影响模型性能）(需要在实验中找到最快的取值)
+- eval/test时shuffle=False
+- 内存够大的情况下，dataloader的**pin_memory**设为True。对特别小的数据集如 MNIST 设置 `pin_memory=False`  反而更快一些。
 
- ~~~
-x = torch.nn.functional.relu(x, inplace=True)
- ~~~
+#####  (1) 预处理提速
 
-- 减少CPU和GPU之间的数据传输。例如， 如果你想知道一个 epoch 中每个 mini-batch 的 loss 和准确率，先将它们累积在 GPU 中等一个 epoch 结束之后一起传输回 CPU 会比每个 mini-batch 都进行一次 GPU 到 CPU 的传输更快。
-- 使用半精度浮点数`half()`会有一定的速度提升，具体效率依赖于GPU型号。需要小心数值精度过低带来的稳定性问题。时常使用 `assert tensor.size() == (N, D, H, W)`作为调试手段，确保张量维度和你设想中一致。
-- 除了标记 y 外，尽量少使用一维张量，使用n*1的二维张量代替，可以避免一些意想不到的一维张量计算结果。
-- 统计代码各部分耗时
+- 尽量减少每次读取数据时的预处理操作，可以考虑把一些固定的操作，例如 resize ，事先处理好保存下来，训练的时候直接拿来用
+- Linux上将预处理搬到GPU上加速：
+
+- - **NVIDIA/DALI** ：https://github.com/NVIDIA/DALI
+  - https://github.com/tanglang96/DataLoaders_DALI
+
+- 数据预取：prefetch_generator（[方法](https://zhuanlan.zhihu.com/p/80695364)）让读数据的worker能在运算时预读数据，而默认是数据清空时才读
+
+##### (2) IO 提速
+
+- 使用更快的图片处理：
+
+- - **opencv 一般要比 PIL 要快**
+  - 对于jpeg读取，可以尝试 **jpeg4py**
+  - 存 **bmp** 图（降低解码时间）
+
+- **小图拼起来存放（降低读取次数）：对于大规模的小文件读取，建议转成单独的文件，可以选择的格式可以考虑**：TFRecord（Tensorflow）、recordIO(recordIO)、hdf5、 pth、n5、lmdb 等等（https://github.com/Lyken17/Efficient-PyTorch#data-loader）
+
+- - **TFRecord**：https://github.com/vahidk/tfrecord
+  - 借助 **lmdb 数据库格式**：
+
+- - - https://github.com/Fangyh09/Image2LMDB
+    - https://blog.csdn.net/P_LarT/article/details/103208405
+    - https://github.com/lartpang/PySODToolBox/blob/master/ForBigDataset/ImageFolder2LMDB.py
+    - https://github.com/Lyken17/Efficient-PyTorch
+
+##### (3)　借助硬件
+
+- 借助内存：**直接载到内存里面，或者把把内存映射成磁盘好了**
+- 借助固态：把读取速度慢的机械硬盘换成 **NVME 固态**吧～
+
+##### (4) 训练策略
+
+- 在训练中使用**低精度（FP16 甚至 INT8 、二值网络、三值网络）表示取代原有精度（FP32）表示**
+
+- - NVIDIA/Apex：
+
+- - - https://blog.csdn.net/c9Yv2cf9I06K2A9E/article/details/100135729
+    - https://github.com/nvidia/apex
+
+- 使用分布式训练　DDP 或者 horovod
+
+##### (5) 代码层面
+
+- `torch.backends.cudnn.benchmark = True`
+- Do numpy-like operations on the GPU wherever you can
+- Free up memory using` del`     用`del`及时删除不用的中间变量，节约GPU存储。
+- Avoid unnecessary transfer of data from the GPU
+- Use pinned memory, and use non_blocking=False to parallelize data transfer and GPU number crunching
+
+### 2. model
+
+1. 用**float16**代替默认的float32运算（[方法参考](https://link.zhihu.com/?target=https%3A//github.com/huggingface/transformers/blob/dad3c7a485b7ffc6fd2766f349e6ee845ecc2eee/examples/run_classifier.py)，搜索"fp16"可以看到需要修改之处，包括model、optimizer、backward、learning rate）
+
+2. **优化器**以及对应参数的选择，如learning rate，不过它对性能的影响似乎更重要【占坑】
+
+3. 少用循环，多用**向量化**操作
+
+4. 经典操作尽量用别人优化好的**库**，别自己写
+
+5. 数据很多时少用append，虽然使用很方便，不过它每次都会重新分配空间？所以数据很大的话，光一次append就要几秒（测过），可以先分配好整个容器大小，每次用索引去修改内容，这样一步只要0.0x秒
+
+6. 固定对模型影响不大的部分参数，还能节约显存，可以用 detach() 切断反向传播，注意若仅仅给变量设置 required_grad=False 还是会计算梯度的
+
+7. eval/test 的时候，加上 model.eval() 和 torch.no_grad()，前者固定 batch-normalization 和 dropout 但是会影响性能，后者关闭 autograd
+
+8. 提高程序**并行度**，例如 我想 train 时对每个 epoch 都能 test 一下以追踪模型性能变化，但是 test 时间成本太高要一个小时，所以写了个 socket，设一个127.0.0.1 的端口，每次 train 完一个 epoch 就发个UDP过去，那个进程就可以自己 test，同时原进程可以继续 train 下一个 epoch（对 这是自己想的诡异方法hhh）
+
+9. torch.backends.cudnn.benchmark设为True，可以让cudnn根据当前训练各项config寻找优化算法，但这本身需要时间，所以input size在训练时会频繁变化的话，建议设为False
+
+10. 使用`inplace`操作可节约 GPU 存储，如
+
+    ~~~
+    x = torch.nn.functional.relu(x, inplace=True)
+    ~~~
+
+11. 减少CPU和GPU之间的数据传输。例如， 如果你想知道一个 epoch 中每个 mini-batch 的 loss 和准确率，先将它们累积在 GPU 中等一个 epoch 结束之后一起传输回 CPU 会比每个 mini-batch 都进行一次 GPU 到 CPU 的传输更快。
+
+12. 使用半精度浮点数`half()`会有一定的速度提升，具体效率依赖于GPU型号。需要小心数值精度过低带来的稳定性问题。时常使用 `assert tensor.size() == (N, D, H, W)`作为调试手段，确保张量维度和你设想中一致。
+
+13. 除了标记 y 外，尽量少使用一维张量，使用n*1的二维张量代替，可以避免一些意想不到的一维张量计算结果。
+
+14.  统计代码各部分耗时
 
 ~~~python
 with torch.autograd.profiler.profile(enabled=True, use_cuda=False) as profile:
@@ -1564,44 +1641,14 @@ with torch.autograd.profiler.profile(enabled=True, use_cuda=False) as profile:
 python -m torch.utils.bottleneck main.py
 ~~~
 
-dataloader方面：
-
-1. DataLoader的参数中，
-
-2. 1. num_workers与batch_size调到合适值，并非越大越快（注意后者也影响模型性能）
-   2. eval/test时shuffle=False
-   3. 内存够大的情况下，dataloader的**pin_memory**设为True，并用data_prefetcher技巧（[方法](https://zhuanlan.zhihu.com/p/80695364)）
-
-3. 把不怎么会更改的**预处理提前做好** 保存到硬盘上，不要放dataloader里做，尤其对图像视频的操作。
-
-4. **减少IO**操作，服务器如果是hdd根本架不住多人对磁盘的折磨，曾经几个小伙伴把服务器弄得卡到无法login...可先多线程把数据放到内存，不太会的话可以先用个dataloader专门把数据先读到list中（即内存），然后把这个list作为每次取数据的池。还可以用tmpfs把内存当硬盘，不过需要权限
-
-5. prefetch_generator（[方法](https://zhuanlan.zhihu.com/p/80695364)）让读数据的worker能在运算时预读数据，而默认是数据清空时才读
 
 
+## 六. 分布式训练 [alpha]
 
-
-
-model方面：
-
-1. 用**float16**代替默认的float32运算（[方法参考](https://link.zhihu.com/?target=https%3A//github.com/huggingface/transformers/blob/dad3c7a485b7ffc6fd2766f349e6ee845ecc2eee/examples/run_classifier.py)，搜索"fp16"可以看到需要修改之处，包括model、optimizer、backward、learning rate）
-2. **优化器**以及对应参数的选择，如learning rate，不过它对性能的影响似乎更重要【占坑】
-3. 少用循环，多用**向量化**操作
-4. 经典操作尽量用别人优化好的**库**，别自己写（想自己实现锻炼能力除外）
-5. 数据很多时少用append，虽然使用很方便，不过它每次都会重新分配空间？所以数据很大的话，光一次append就要几秒（测过），可以先分配好整个容器大小，每次用索引去修改内容，这样一步只要0.0x秒
-6. 固定对模型影响不大的部分参数，还能节约显存，可以用detach()切断反向传播，注意若仅仅给变量设置required_grad=False 还是会计算梯度的
-7. eval/test的时候，加上model.eval()和torch.no_grad()，前者固定batch-normalization和dropout 但是会影响性能，后者关闭autograd
-8. 提高程序**并行度**，例如 我想train时对每个epoch都能test一下以追踪模型性能变化，但是test时间成本太高要一个小时，所以写了个socket，设一个127.0.0.1的端口，每次train完一个epoch就发个UDP过去，那个进程就可以自己test，同时原进程可以继续train下一个epoch（对 这是自己想的诡异方法hhh）
-
-其他：
-
-1. torch.backends.cudnn.benchmark设为True，可以让cudnn根据当前训练各项config寻找优化算法，但这本身需要时间，所以input size在训练时会频繁变化的话，建议设为False
-
-
-
-## 六. 分布式训练
-
+~~~
 os.environ['NCCL_SOCKET_IFNAME'] = 'enp2s0'
+os.environ['GLOO_SOCKET_IFNAME'] = 'enp2s0'
+~~~
 
 #### nn.DataParallel
 
@@ -1706,8 +1753,6 @@ hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters(), c
 
 - flask_api
 - TensorRT
-
-
 
 
 
@@ -1845,6 +1890,15 @@ for i in range(100):
 **Efficient-Pytorch:** https://github.com/Lyken17/Efficient-PyTorch
 
 **NVIDIA/APEX:** https://github.com/nvidia/apex
+
+### 8. 性能分析工具
+
+- nvidia-smi
+- htop
+- iotop
+- nvtop
+- py-spy
+- strace
 
 
 
