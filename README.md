@@ -1885,7 +1885,7 @@ for i in range(100):
 
 ### 7. Pytorch 加速
 
-**NVIDIA/DLAI: ** https://github.com/NVIDIA/DALI
+**NVIDIA/DLAI:** https://github.com/NVIDIA/DALI
 
 **Efficient-Pytorch:** https://github.com/Lyken17/Efficient-PyTorch
 
