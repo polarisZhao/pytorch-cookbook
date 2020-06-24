@@ -4,21 +4,21 @@
 
 ​      [1. numpy array 和 Tensor(CPU &amp; GPU)](#1-numpy-array-和-tensorcpu--gpu)
 
-​     \ [2. Variable 和　Tensor (require_grad=True)](#2-variable-和tensor-require_gradtrue)
+​      [2. Variable 和　Tensor (require_grad=True)](#2-variable-和tensor-require_gradtrue)
 
-​     \ [3. detach 和　with torch.no_grad()](#3-detach-和with-torchno_grad)
+​      [3. detach 和　with torch.no_grad()](#3-detach-和with-torchno_grad)
 
-​     \ [4. model.eval()　和 torch.no_grad()](#4-modeleval和-torchno_grad)
+​      [4. model.eval()　和 torch.no_grad()](#4-modeleval和-torchno_grad)
 
-​     \ [5. xx.data 和 xx.detach()](#5-xxdata-和-xxdetach)
+​      [5. xx.data 和 xx.detach()](#5-xxdata-和-xxdetach)
 
-​     \ [6. ToTensor &amp; ToPILImage 各自都做了什么?](#6-totensor--topilimage-各自都做了什么)
+​      [6. ToTensor &amp; ToPILImage 各自都做了什么?](#6-totensor--topilimage-各自都做了什么)
 
-​     \ [7. torch.nn.xxx 与 torch.nn.functional.xxx](#7-torchnnxxx-与-torchnnfunctionalxxx)
+​      [7. torch.nn.xxx 与 torch.nn.functional.xxx](#7-torchnnxxx-与-torchnnfunctionalxxx)
 
-   \ [二. Pytorch API](#二-pytorch-api)
+    [二. Pytorch API](#二-pytorch-api)
 
-​     \ [1. import torch](#1-import-torch)
+​      [1. import torch](#1-import-torch)
 
 ​      [2. Tensor type](#2-tensor-type)
 
@@ -26,47 +26,47 @@
 
 ​      [4. 索引、比较、排序](#4-索引比较排序)
 
-​     \ [5. Element-wise 和 归并操作](#5-element-wise-和-归并操作)
+​      [5. Element-wise 和 归并操作](#5-element-wise-和-归并操作)
 
 ​      [6. 变形操作](#6-变形操作)
 
-​     \ [7. 组合与分块](#7-组合与分块)
+​      [7. 组合与分块](#7-组合与分块)
 
-​     \ [8. linear algebra](#8-linear-algebra)
+​      [8. linear algebra](#8-linear-algebra)
 
 ​      [9. 基本机制](#9-基本机制)
 
 ​      [10. nn](#10-nn)
 
-​     \ [11. optim -&gt; form torch import optim](#11-optim---form-torch-import-optim)
+​      [11. optim -&gt; form torch import optim](#11-optim---form-torch-import-optim)
 
-​     \ [12. learning rate](#12--learning-rate)
+​      [12. learning rate](#12--learning-rate)
 
-​     \ [12. save and load model](#12-save-and-load-model)
+​      [12. save and load model](#12-save-and-load-model)
 
 ​      [13. torchvision](#13-torchvision)
 
-​     \ [14. Code Samples](#14-code-samples)
+​      [14. Code Samples](#14-code-samples)
 
-​     \ [15. jit &amp; torchscript](#15-jit--torchscript)
+​      [15. jit &amp; torchscript](#15-jit--torchscript)
 
-​     \ [16. onnx](#16-onnx)
+​      [16. onnx](#16-onnx)
 
-​     \ [17. Distributed Training](#17-distributed-training)
+​      [17. Distributed Training](#17-distributed-training)
 
-   \ [三. How to Build a network](#三-how-to-build-a-network)
+    [三. How to Build a network](#三-how-to-build-a-network)
 
-​     \ [基本工作流程](#基本工作流程)
+​      [基本工作流程](#基本工作流程)
 
-​        \ [(1) 构建神经网络](#1-构建神经网络)
+​         [(1) 构建神经网络](#1-构建神经网络)
 
-​        \ [(2) 自定义数据集](#2-自定义数据集)
+​         [(2) 自定义数据集](#2-自定义数据集)
 
-​        \ [(3) 自定义损失](#3-自定义损失)
+​         [(3) 自定义损失](#3-自定义损失)
 
-​        \ [(4) 推荐使用的用于训练模型的代码结构](#4-推荐使用的用于训练模型的代码结构)
+​         [(4) 推荐使用的用于训练模型的代码结构](#4-推荐使用的用于训练模型的代码结构)
 
-   \ [四. 常见代码片段](#四-常见代码片段)
+    [四. 常见代码片段](#四-常见代码片段)
 
 ​      [1. 基础配置](#1-基础配置)
 
@@ -78,51 +78,51 @@
 
 ​      [5. Trick](#5-trick)
 
-   \ [五. 网络优化和加速 [alpha]](#五-网络优化和加速-alpha)
+    [五. 网络优化和加速 [alpha]](#五-网络优化和加速-alpha)
 
 ​      [1. 数据](#1-数据)
 
-​     \ [2. model](#2-model)
+​      [2. model](#2-model)
 
-   \ [六. 分布式训练 [alpha]](#六-分布式训练-alpha)
+    [六. 分布式训练 [alpha]](#六-分布式训练-alpha)
 
-​      \ [nn.DataParallel](#nndataparallel)
+​       [nn.DataParallel](#nndataparallel)
 
-​      \ [torch.distributed](#torchdistributed)
+​       [torch.distributed](#torchdistributed)
 
-​      \ [APEX](#apex)
+​       [APEX](#apex)
 
-​      \ [Horovod](#horovod)
+​       [Horovod](#horovod)
 
-   \ [七. 移动端部署](#七-移动端部署)
+    [七. 移动端部署](#七-移动端部署)
 
-   \ [八. 服务器端部署](#八-服务器端部署)
+    [八. 服务器端部署](#八-服务器端部署)
 
-   \ [九. 最佳实践(To do or not to do)](#九-最佳实践to-do-or-not-to-do)
+    [九. 最佳实践(To do or not to do)](#九-最佳实践to-do-or-not-to-do)
 
-   \ [十. ToolBox](#十-toolbox)
+    [十. ToolBox](#十-toolbox)
 
-​     \ [1. 预训练模型](#1-预训练模型)
+​      [1. 预训练模型](#1-预训练模型)
 
-​     \ [2. 数据增强](#2-数据增强)
+​      [2. 数据增强](#2-数据增强)
 
-​     \ [3. 标记工具](#3-标记工具)
+​      [3. 标记工具](#3-标记工具)
 
-​     \ [4. 数据集查找](#4-数据集查找)
+​      [4. 数据集查找](#4-数据集查找)
 
 ​      [5. 模型分析工具](#5-模型分析工具)
 
-​     \ [6. 可视化工具](#6-可视化工具)
+​      [6. 可视化工具](#6-可视化工具)
 
-​     \ [7. Pytorch 加速](#7-pytorch-加速)
+​      [7. Pytorch 加速](#7-pytorch-加速)
 
-​     \ [8. 性能分析工具](#8-性能分析工具)
+​      [8. 性能分析工具](#8-性能分析工具)
 
-​     \ [9. 深度学习绘图](#9-深度学习绘图)
+​      [9. 深度学习绘图](#9-深度学习绘图)
 
-​     \ [10. 其他辅助工具](#10-其他辅助工具)
+​      [10. 其他辅助工具](#10-其他辅助工具)
 
-   \ [参考链接 [alpha]](#参考链接-alpha)
+    [参考链接 [alpha]](#参考链接-alpha)
 
 
 
