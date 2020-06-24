@@ -1,8 +1,132 @@
 # PyTorch Cookbook
 
-[TOC]
+   [一. Basic concept](#一-basic-concept)
 
-## 一. Basic concept [alpha]
+​      [1. numpy array 和 Tensor(CPU &amp; GPU)](#1-numpy-array-和-tensorcpu--gpu)
+
+​     \ [2. Variable 和　Tensor (require_grad=True)](#2-variable-和tensor-require_gradtrue)
+
+​     \ [3. detach 和　with torch.no_grad()](#3-detach-和with-torchno_grad)
+
+​     \ [4. model.eval()　和 torch.no_grad()](#4-modeleval和-torchno_grad)
+
+​     \ [5. xx.data 和 xx.detach()](#5-xxdata-和-xxdetach)
+
+​     \ [6. ToTensor &amp; ToPILImage 各自都做了什么?](#6-totensor--topilimage-各自都做了什么)
+
+​     \ [7. torch.nn.xxx 与 torch.nn.functional.xxx](#7-torchnnxxx-与-torchnnfunctionalxxx)
+
+   \ [二. Pytorch API](#二-pytorch-api)
+
+​     \ [1. import torch](#1-import-torch)
+
+​      [2. Tensor type](#2-tensor-type)
+
+​      [3. Tensor Create](#3-tensor-create)
+
+​      [4. 索引、比较、排序](#4-索引比较排序)
+
+​     \ [5. Element-wise 和 归并操作](#5-element-wise-和-归并操作)
+
+​      [6. 变形操作](#6-变形操作)
+
+​     \ [7. 组合与分块](#7-组合与分块)
+
+​     \ [8. linear algebra](#8-linear-algebra)
+
+​      [9. 基本机制](#9-基本机制)
+
+​      [10. nn](#10-nn)
+
+​     \ [11. optim -&gt; form torch import optim](#11-optim---form-torch-import-optim)
+
+​     \ [12. learning rate](#12--learning-rate)
+
+​     \ [12. save and load model](#12-save-and-load-model)
+
+​      [13. torchvision](#13-torchvision)
+
+​     \ [14. Code Samples](#14-code-samples)
+
+​     \ [15. jit &amp; torchscript](#15-jit--torchscript)
+
+​     \ [16. onnx](#16-onnx)
+
+​     \ [17. Distributed Training](#17-distributed-training)
+
+   \ [三. How to Build a network](#三-how-to-build-a-network)
+
+​     \ [基本工作流程](#基本工作流程)
+
+​        \ [(1) 构建神经网络](#1-构建神经网络)
+
+​        \ [(2) 自定义数据集](#2-自定义数据集)
+
+​        \ [(3) 自定义损失](#3-自定义损失)
+
+​        \ [(4) 推荐使用的用于训练模型的代码结构](#4-推荐使用的用于训练模型的代码结构)
+
+   \ [四. 常见代码片段](#四-常见代码片段)
+
+​      [1. 基础配置](#1-基础配置)
+
+​      [2. 模型](#2-模型)
+
+​      [3. 数据](#3-数据)
+
+​      [4. 训练](#4-训练)
+
+​      [5. Trick](#5-trick)
+
+   \ [五. 网络优化和加速 [alpha]](#五-网络优化和加速-alpha)
+
+​      [1. 数据](#1-数据)
+
+​     \ [2. model](#2-model)
+
+   \ [六. 分布式训练 [alpha]](#六-分布式训练-alpha)
+
+​      \ [nn.DataParallel](#nndataparallel)
+
+​      \ [torch.distributed](#torchdistributed)
+
+​      \ [APEX](#apex)
+
+​      \ [Horovod](#horovod)
+
+   \ [七. 移动端部署](#七-移动端部署)
+
+   \ [八. 服务器端部署](#八-服务器端部署)
+
+   \ [九. 最佳实践(To do or not to do)](#九-最佳实践to-do-or-not-to-do)
+
+   \ [十. ToolBox](#十-toolbox)
+
+​     \ [1. 预训练模型](#1-预训练模型)
+
+​     \ [2. 数据增强](#2-数据增强)
+
+​     \ [3. 标记工具](#3-标记工具)
+
+​     \ [4. 数据集查找](#4-数据集查找)
+
+​      [5. 模型分析工具](#5-模型分析工具)
+
+​     \ [6. 可视化工具](#6-可视化工具)
+
+​     \ [7. Pytorch 加速](#7-pytorch-加速)
+
+​     \ [8. 性能分析工具](#8-性能分析工具)
+
+​     \ [9. 深度学习绘图](#9-深度学习绘图)
+
+​     \ [10. 其他辅助工具](#10-其他辅助工具)
+
+   \ [参考链接 [alpha]](#参考链接-alpha)
+
+
+
+## 一. Basic concept
 
 ### 1. numpy array 和 Tensor(CPU & GPU)
 
@@ -143,7 +267,7 @@ def forward(self, x):
 
 
 
-## 二. Pytorch API [alpha]
+## 二. Pytorch API
 
 ### 1. import torch
 
@@ -180,7 +304,7 @@ torch.set_default_tensor_type('torch.DoubleTensor')
 
 ##### CPU/GPU 互转
 
-CPU Tensor 和 GPU Tensor 的区别在于， 前者存储在内存中，而后者存储在显存中。两者之间的转换可以通过 `.cpu()`、`.cuda()`和 `.to(device)` 来完成  ※
+CPU Tensor 和 GPU Tensor 的区别在于， 前者存储在内存中，而后者存储在显存中。两者之间的转换可以通过 `.cpu()`、`.cuda()`和 `.to(device)` 来完成  
 
 ~~~python
 >>> device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  
@@ -191,12 +315,12 @@ CPU Tensor 和 GPU Tensor 的区别在于， 前者存储在内存中，而后�
 >>> a = a.cpu() # GPU -> CPU
 >>> a.type()
 'torch.FloatTensor'
->>> a = a.to(device) # CPU <->  GPU
+>>> a = a.to(device) # to device
 >>> a.type()
 'torch.cuda.FloatTensor'
 ~~~
 
-##### 判定 Tensor 类型的几种方式: ※
+##### 判定 Tensor 类型的几种方式: 
 
 ~~~python
 >>> a
@@ -204,10 +328,10 @@ tensor([[0.6065, 0.0122, 0.4473],
         [0.5937, 0.5530, 0.4663]], device='cuda:0')
 >>> a.is_cuda  # 可以显示是否在显存中
 True
->>> a.dtype  # Tensor 内部data的类型
+>>> a.dtype   # Tensor 内部data的类型
 torch.float32
 >>> a.type()
-'torch.cuda.FloatTensor'  # 可以直接显示Tensor类型 = is_cuda + dtype
+'torch.cuda.FloatTensor'  # 可以直接显示 Tensor 类型 = is_cuda + dtype
 ~~~
 
 ##### 类型转换
@@ -223,7 +347,7 @@ tensor([[0.6065, 0.0122, 0.4473],
 tensor([[0.6065, 0.0122, 0.4473],
         [0.5937, 0.5530, 0.4663]], device='cuda:0', dtype=torch.float64)
 >>> b = torch.randn(4,5)
->>> b.type_as(a)  # 使用 type_as 函数并不需要明确具体是哪种类型
+>>> b.type_as(a)  # 使用 type_as 函数, 并不需要明确具体是哪种类型
 tensor([[ 0.2129,  0.1877, -0.0626,  0.4607, -1.0375],
         [ 0.7222, -0.3502,  0.1288,  0.6786,  0.5062],
         [-0.4956, -0.0793,  0.7590, -1.0932, -0.1084],
@@ -234,7 +358,7 @@ tensor([[ 0.2129,  0.1877, -0.0626,  0.4607, -1.0375],
 ##### numpy array 与　torch Tensor　互转
 
 ~~~python
-torch.Tensor与np.ndarray转换
+torch.Tensor 与 np.ndarray 转换
 # torch.Tensor -> np.ndarray.
 ndarray = tensor.cpu().numpy()
 
@@ -246,10 +370,10 @@ tensor = torch.from_numpy(ndarray.copy()).float()  # If ndarray has negative str
 ##### Tensor 相关信息获取
 
 ~~~python
-torch.size()/torch.shape   # 两者等价， 返回t的形状, 可以使用 x.size()[1] 或 x.size(1) 查看列数
-torch.numel() / torch.nelement()  # 两者等价, t中元素总个数
-a.item()  # 取出单个tensor的值
-tensor.dim()  # 维度
+t.size()/t、.shape   # 两者等价， 返回 t 的形状, 可以使用 t.size()[1] 或 t.size(1) 查看列数
+t.numel() / t.nelement()  # 两者等价, 返回 tensor 中元素总个数
+t.item()  # 取出单个 tensor 的值
+t.dim()  # 维度
 ~~~
 
 ### 3. Tensor Create
@@ -257,10 +381,12 @@ tensor.dim()  # 维度
 ##### 最基本的Tensor创建方式
 
 ~~~python
-troch.Tensor(2, 2) # 会使用默认的类型创建 Tensor, 可以通过 torch.set_default_tensor_type('torch.DoubleTensor') 进行修改
+troch.Tensor(2, 2) # 会使用默认的类型创建 Tensor, 
+                   # 可以通过 torch.set_default_tensor_type('torch.DoubleTensor') 进行修改
 torch.DoubleTensor(2, 2) # 指定类型创建 Tensor
 
-torch.Tensor([[1, 2], [3, 4]])  # 通过 list 创建 Tensor          将 Tensor转换为list可以使用: t.tolist():
+torch.Tensor([[1, 2], [3, 4]])  # 通过 list 创建 Tensor
+                                # 将 Tensor转换为list可以使用: t.tolist()
 torch.from_numpy(np.array([2, 3.3]) ) # 通过 numpy array 创建 tensor
 ~~~
 
@@ -278,17 +404,20 @@ torch.full(sizes, value) # 指定 value
 ~~~python
 torch.rand(sizes)  # 均匀分布   
 torch.randn(sizes)   # 标准分布
-# 正态分布: 返回一个张量，包含从给定参数 means,std 的离散正态分布中抽取随机数。 均值 means是一个张量，包含每个输出元素相关的正态分布的均值 -> 以此张量的均值作为均值
-# std是一个张量，包含每个输出元素相关的正态分布的标准差 -> 以此张量的标准差作为标准差。 均值和标准差的形状不须匹配，但每个张量的元素个数须相同
+# 正态分布: 返回一个张量，包含从给定参数 means, std 的离散正态分布中抽取随机数。 
+# 均值 means 是一个张量，包含每个输出元素相关的正态分布的均值 -> 以此张量的均值作为均值
+# 标准差 std 是一个张量，包含每个输出元素相关的正态分布的标准差 -> 以此张量的标准差作为标准差。 
+# 均值和标准差的形状不须匹配，但每个张量的元素个数须相同
 torch.normal(mean=torch.arange(1., 11.), std=torch.arange(1, 0, -0.1))
 tensor([-0.1987,  3.1957,  3.5459,  2.8150,  5.5398,  5.6116,  7.5512,  7.8650,
          9.3151, 10.1827])
 torch.uniform(from,to) # 均匀分布 
 
-torch.arange(s, e, steps)  # 从s到e，步长为step
-torch.linspace(s, e, num)   # 从s到e,均匀切分为 num 份, 注意linespace和arange的区别，前者的最后一个参数是生成的Tensor中元素的数量，而后者的最后一个参数是步长。
+torch.arange(s, e, steps)  # 从 s 到 e，步长为 step
+torch.linspace(s, e, num)   # 从 s 到 e, 均匀切分为 num 份
+# ! 注意linespace和arange的区别，前者的最后一个参数是生成的Tensor中元素的数量，而后者的最后一个参数是步长。
 torch.randperm(m) # 0 到 m-1 的随机序列
-# --> shuffle 操作
+# ! shuffle 操作
 tensor[torch.randperm(tensor.size(0))] 
 ~~~
 
@@ -492,8 +621,8 @@ b = a[:,None, None,:] # None 处的维度为１
 **组合操作** 是将不同的 Tensor 叠加起来。 主要有 `cat()` 和 `torch.stack()` 两个函数，cat 即 concatenate 的意思， 是指沿着已有的数据的某一维度进行拼接， 操作后的数据的总维数不变， 在进行拼接时， 除了拼接的维度之外， 其他维度必须相同。 而` torch. stack()` 函数会新增一个维度， 并按照指定的维度进行叠加。
 
 ~~~shell
-torch.cat(list_of_tensors, dim=0)　  # k个(m,n) -> (k*m, n)
-torch.stack(list_of_tensors, dim=0)   # k个(m,n) -> (k*m*n)
+torch.cat(list_of_tensors, dim=0)　  # k 个 (m,n) -> (k*m, n)
+torch.stack(list_of_tensors, dim=0)   # k 个 (m,n) -> (k*m*n)
 ~~~
 
 **分块操作** 是指将 Tensor 分割成不同的子 Tensor，主要有 `torch.chunk()` 与 `torch.split()` 两个函数，前者需要指定分块的数量，而后者则需要指定每一块的大小，以整形或者list来表示。
@@ -1772,7 +1901,7 @@ Numpy 是在 CPU 上运行的，它比 torch 的代码运行得要慢一些。�
 
 
 
-## 十. ToolBox [alpha]
+## 十. ToolBox
 
 ### 1. 预训练模型
 
@@ -1794,7 +1923,7 @@ https://github.com/albumentations-team/albumentations
 
 ### 4. 数据集查找
 
-论文的评测指标　=> datasets
+**! ! !  You can find datasets in Paper Beachmark**
 
 [**Kaggle**](https://www.kaggle.com/)
 
@@ -1862,7 +1991,7 @@ for t in epoch(80):
 - **acc / loss**
 
 ```python
-from tensorboardX import SummaryWriter
+from tensorboard import SummaryWriter
 writer = SummaryWriter()
 for n_iter in range(100):
     dummy_s1 = torch.rand(1)
@@ -1873,7 +2002,7 @@ writer.close()
 - **img**
 
 ```python
-from tensorboardX import SummaryWriter
+from tensorboard import SummaryWriter
 import torchvision.utils as vutils
 writer = SummaryWriter()
 if n_iter % 10 == 0:
@@ -1907,6 +2036,16 @@ for i in range(100):
 - nvtop
 - py-spy
 - strace
+
+### 9. 深度学习绘图
+
+- [**ML Visuals**](https://github.com/dair-ai/ml-visuals)
+- [**PlotNeuralNet**](https://github.com/HarisIqbal88/PlotNeuralNet)
+
+### 10. 其他辅助工具
+
+- **byobu**
+- **screen**
 
 
 
