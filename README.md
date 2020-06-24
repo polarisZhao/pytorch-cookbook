@@ -16,7 +16,7 @@
 
 ​      [7. torch.nn.xxx 与 torch.nn.functional.xxx](#7-torchnnxxx-与-torchnnfunctionalxxx)
 
-    [二. Pytorch API](#二-pytorch-api)
+   [二. Pytorch API](#二-pytorch-api)
 
 ​      [1. import torch](#1-import-torch)
 
@@ -54,7 +54,7 @@
 
 ​      [17. Distributed Training](#17-distributed-training)
 
-    [三. How to Build a network](#三-how-to-build-a-network)
+   [三. How to Build a network](#三-how-to-build-a-network)
 
 ​      [基本工作流程](#基本工作流程)
 
@@ -66,7 +66,7 @@
 
 ​         [(4) 推荐使用的用于训练模型的代码结构](#4-推荐使用的用于训练模型的代码结构)
 
-    [四. 常见代码片段](#四-常见代码片段)
+   [四. 常见代码片段](#四-常见代码片段)
 
 ​      [1. 基础配置](#1-基础配置)
 
@@ -78,13 +78,13 @@
 
 ​      [5. Trick](#5-trick)
 
-    [五. 网络优化和加速 [alpha]](#五-网络优化和加速-alpha)
+   [五. 网络优化和加速 [alpha]](#五-网络优化和加速-alpha)
 
 ​      [1. 数据](#1-数据)
 
 ​      [2. model](#2-model)
 
-    [六. 分布式训练 [alpha]](#六-分布式训练-alpha)
+   [六. 分布式训练 [alpha]](#六-分布式训练-alpha)
 
 ​       [nn.DataParallel](#nndataparallel)
 
@@ -94,13 +94,13 @@
 
 ​       [Horovod](#horovod)
 
-    [七. 移动端部署](#七-移动端部署)
+   [七. 移动端部署](#七-移动端部署)
 
-    [八. 服务器端部署](#八-服务器端部署)
+   [八. 服务器端部署](#八-服务器端部署)
 
-    [九. 最佳实践(To do or not to do)](#九-最佳实践to-do-or-not-to-do)
+   [九. 最佳实践(To do or not to do)](#九-最佳实践to-do-or-not-to-do)
 
-    [十. ToolBox](#十-toolbox)
+   [十. ToolBox](#十-toolbox)
 
 ​      [1. 预训练模型](#1-预训练模型)
 
@@ -122,7 +122,7 @@
 
 ​      [10. 其他辅助工具](#10-其他辅助工具)
 
-    [参考链接 [alpha]](#参考链接-alpha)
+   [参考链接 [alpha]](#参考链接-alpha)
 
 
 
